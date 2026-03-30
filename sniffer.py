@@ -1,6 +1,6 @@
 import socket
 from scapy.all import sniff, IP, UDP, TCP,ICMP,ARP
-
+import os
 def get_my_IP():
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -12,9 +12,15 @@ def get_my_IP():
     except:
         return "127.0.0.1"
 
-MY_IP = get_my_IP()
 
-def start_packet_sniffing(gui_callback,stop_check):
+def start_packet_sniffing(gui_callback,stop_check,interface):
+    MY_IP = get_my_IP()
+
+    check_iface = os.system(f"ip link show {interface} | grep 'UP' > /dev/null")
+    if check_iface != 0:
+        # যদি আপ না থাকে তবে জোর করে আপ করা
+        os.system(f"sudo ip link set {interface} up")
+
     def packet_callback(packet):
         protocol = "Other"
         src_ip = "N/A"
@@ -56,12 +62,16 @@ def start_packet_sniffing(gui_callback,stop_check):
         gui_callback({"display":log_data,"raw":packet})
 
 
-    # Function to call for each packet captured
-    sniff(
-        prn=packet_callback,  # prn= Packet RenderingNetwork
-        store=0,              # Don't keep packets in memory
-
-                    # anonymous function
-        stop_filter=lambda x: stop_check()  # stop_check true then stop sniffing
-)
+    try:
+        # Function to call for each packet captured
+        sniff(
+            iface=interface,
+            prn=packet_callback, # prn= Packet Rendering Network
+            store=0, # Don't keep packets in memory
+            stop_filter=lambda x: stop_check()# stop_check true then stop sniffing
+        )
+    except OSError as e:
+        gui_callback({"display": f"[!] Sniffer Error: {interface} is down.", "raw": None})
+    except Exception as e:
+        gui_callback({"display": f"[!] Error: {str(e)}", "raw": None})
 

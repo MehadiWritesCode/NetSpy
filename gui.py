@@ -5,7 +5,7 @@ import sniffer
 import customtkinter as ctk
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
-
+from monitor_window import monitor_window_ui
 
 class NetSpyGUI(ctk.CTk):  # It means Child of CustomTkinter
 
@@ -15,6 +15,30 @@ class NetSpyGUI(ctk.CTk):  # It means Child of CustomTkinter
         # windows title
         self.title("NetSpy - Network Traffic Monitor")
         self.geometry("1200x900")
+
+        #interface track
+        import wifi_monitor
+        available_ifaces = wifi_monitor.get_available_interface()
+
+        if available_ifaces:
+            self.current_interface = "wlan0" if "wlan0" in available_ifaces else available_ifaces[0]
+            status_color = "#e74c3c"
+            status_text = f"🌐 Interface: {self.current_interface} (Managed)"
+        else:
+            self.current_interface = "None"
+            status_color = "#e74c3c"
+            status_text = "⚠️ No Interface Found!"
+
+        self.status_frame = ctk.CTkFrame(self, fg_color="transparent")
+        self.status_frame.place(relx=0.02, rely=0.05, anchor="nw")
+
+        self.iface_label = ctk.CTkLabel(
+            self.status_frame,
+            text=f"🌐 Interface: {self.current_interface}",
+            font=("Roboto", 13, "bold"),
+            text_color="#e74c3c"
+        )
+        self.iface_label.pack()
 
         # Label
         self.title_label = ctk.CTkLabel(
@@ -34,13 +58,25 @@ class NetSpyGUI(ctk.CTk):  # It means Child of CustomTkinter
         )
         self.slogan_label.pack(pady=(0, 20))
 
+        # Monitor Mode Button (Top Right Corner)
+        self.monitor_btn = ctk.CTkButton(
+            self,
+            text="📡 Monitor Mode",
+            width=140,
+            height=32,
+            fg_color="#2c3e50",
+            hover_color="#34495e",
+            command=self.open_monitor_window,
+            font=("Roboto", 12, "bold")
+        )
+        self.monitor_btn.place(relx=0.98, rely=0.05, anchor="ne")
+
         self.line = ctk.CTkFrame(self, height=2, width=400, fg_color="gray")
         self.line.pack(pady=10)
 
-        # middle container
+        # middle main container
         self.middle_container = ctk.CTkFrame(self, fg_color="transparent")
         self.middle_container.pack(fill="both", expand=True, padx=20, pady=10)
-
 
         #left side elog area
         self.left_frame = ctk.CTkFrame(self.middle_container, fg_color="transparent")
@@ -103,27 +139,52 @@ class NetSpyGUI(ctk.CTk):  # It means Child of CustomTkinter
 
         self.stats_area.tag_config("header", foreground="#FFFFFF")
 
-
         #Button Frame
         self.is_sniffing = False
 
         self.button_frame = ctk.CTkFrame(self, fg_color="transparent")
-        self.button_frame.pack(fill="x", pady=20)
+        self.button_frame.pack(fill="x", side="bottom", pady=(10, 30))
 
-        # start button
-        self.start_btn = ctk.CTkButton(self.button_frame, text="Start Sniffing", command=self.start_sniffing)
-        self.start_btn.pack(side="left", expand=True, padx=10)
+        self.button_container = ctk.CTkFrame(self.button_frame, fg_color="transparent")
+        self.button_container.pack(expand=True)
 
-        # stop button
-        self.stop_btn = ctk.CTkButton(self.button_frame, text="Stop Sniffing", command=self.stop_sniffing,state="disabled", fg_color="#A82424")
-        self.stop_btn.pack(side="left", expand=True, padx=10)
+        # Start Button
+        self.start_btn = ctk.CTkButton(
+            self.button_container,
+            text="▶  Start Sniffing",
+            font=("Roboto", 14, "bold"),
+            width=170,
+            height=42,
+            corner_radius=10,
+            command=self.start_sniffing
+        )
+        self.start_btn.pack(side="left", padx=15)
+
+        # Stop Button
+        self.stop_btn = ctk.CTkButton(
+            self.button_container,
+            text="⏹  Stop Sniffing",
+            font=("Roboto", 14, "bold"),
+            width=170,
+            height=42,
+            corner_radius=10,
+            fg_color="#A82424",
+            hover_color="#C0392B",
+            state="disabled",
+            command=self.stop_sniffing
+        )
+        self.stop_btn.pack(side="left", padx=15)
 
     def stop_check(self):
         return not self.is_sniffing
 
     def start_sniffing(self):
+        if self.current_interface == "None" or not self.current_interface:
+            self.update_log("[!] Error: Interface not detected. Please select one.")
+            return
+
         self.is_sniffing = True
-        self.update_log("[+] Monitoring Started...")
+        self.update_log(f"[+] Sniffing started on {self.current_interface}")
 
         self.start_btn.configure(state="disabled")
         self.stop_btn.configure(state="normal")
@@ -131,7 +192,7 @@ class NetSpyGUI(ctk.CTk):  # It means Child of CustomTkinter
         #creating thread
         sniffer_thread = threading.Thread(
             target = sniffer.start_packet_sniffing,
-            args = (self.update_log,self.stop_check),
+            args = (self.update_log,self.stop_check,self.current_interface),
             daemon=True
         )
         sniffer_thread.start()
@@ -158,6 +219,7 @@ class NetSpyGUI(ctk.CTk):  # It means Child of CustomTkinter
         if isinstance(data,dict):
             message = data["display"]
             raw_packet = data["raw"]
+
             self.packet_list.append(raw_packet)
 
             protocol_tag = "other"
@@ -225,7 +287,7 @@ class NetSpyGUI(ctk.CTk):  # It means Child of CustomTkinter
         self.highlight_line(event)
         index = self.log_area.index(f"@{event.x},{event.y}")
         line_number = int(index.split(".")[0])
-        actual_index = line_number - 2
+        actual_index = line_number - 1
 
         if 0 <= actual_index < len(self.packet_list):
             pkt = self.packet_list[actual_index]
@@ -376,3 +438,23 @@ class NetSpyGUI(ctk.CTk):  # It means Child of CustomTkinter
             self.stats_area.configure(state="disabled")
         except Exception as e:
             print(f"UI Refresh Error: {e}")
+    def open_monitor_window(self):
+        # If already open
+        if hasattr(self, "mon_win") and self.mon_win.winfo_exists():
+            self.mon_win.focus()  # open old window
+        else:
+            from monitor_window import monitor_window_ui
+            self.mon_win = monitor_window_ui(self, self.update_log)
+
+    def update_interface_status(self, name, is_active=True):
+        self.current_interface = name
+        if is_active:
+            self.iface_label.configure(
+                text=f"📡 Interface: {name} (Monitor)",
+                text_color="#2ecc71"
+            )
+        else:
+            self.iface_label.configure(
+                text=f"🌐 Interface: {name} (Managed)",
+                text_color="#e74c3c"
+            )
