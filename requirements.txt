@@ -1,0 +1,6 @@
+Libraries >
+1.Scapy (Packet capturing engine)
+2.CustomTkinter (Modern UI Interface)
+3.Matplotlib (Realtime Graph)
+
+4.root permission: sudo .venv/bin/python3 sniffer.py
