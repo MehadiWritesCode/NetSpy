@@ -1,8 +1,9 @@
 import threading
 
 import customtkinter as ctk
-from scapy.interfaces import ifaces
-
+import advance_monitor
+import time
+import os
 import wifi_monitor
 
 class monitor_window_ui(ctk.CTkToplevel):
@@ -13,7 +14,7 @@ class monitor_window_ui(ctk.CTkToplevel):
 
         # --- Window Configuration ---
         self.title("NetSpy - Wireless Setup")
-        self.geometry("1000x800")
+        self.geometry("1200x900")
         self.attributes("-topmost", True)
         self.configure(fg_color="#121212")  # Deep dark background
 
@@ -118,6 +119,17 @@ class monitor_window_ui(ctk.CTkToplevel):
         )
         self.deactivate_btn.grid(row=0, column=1, padx=10)
 
+        #advanced button
+        self.advanced_btn = ctk.CTkButton(
+            self.content_frame,
+            text="🔍 OPEN ADVANCED INSPECTOR",
+            font=("Roboto", 14, "bold"),
+            height=45,
+            fg_color="#3498db",
+            hover_color="#2980b9",
+           command=self.open_advanced_menu
+        )
+
     def do_active(self):
         interface = self.iface_dropdown.get()
         self.stop_events = threading.Event()
@@ -139,8 +151,19 @@ class monitor_window_ui(ctk.CTkToplevel):
             success, new_name = wifi_monitor.activate_monitor_mode(interface)
 
             if success:
+                self.iface_dropdown.set(new_name)
+
                 self.status_text.configure(text=f"> SUCCESS: {new_name} is active!", text_color="#00FF00")
                 self.update_log(f"[SYSTEM] Switched to Monitor Mode: {new_name}")
+
+                hopper_thread = threading.Thread(
+                target=self.run_channel_hopper,
+                args=(new_name,),
+                daemon=True
+                )
+                hopper_thread.start()
+
+                self.advanced_btn.pack(pady=10)
 
                 if hasattr(self.master, "update_interface_status"):
                     self.master.update_interface_status(new_name)
@@ -166,6 +189,10 @@ class monitor_window_ui(ctk.CTkToplevel):
             self.stop_events.set()
 
         interface = self.iface_dropdown.get()
+
+        self.advanced_btn.pack_forget()
+
+        interface = self.iface_dropdown.get()
         #interface = current if "mon" in current else f"{current}mon"
 
         self.status_text.configure(text=f"> Stopping {interface} and restarting NetworkManager...", text_color="yellow")
@@ -181,6 +208,9 @@ class monitor_window_ui(ctk.CTkToplevel):
 
             original_name = interface.replace("mon", "")
 
+            self.iface_dropdown.set(original_name)
+            self.activate_btn.configure(state="normal", text="ACTIVATE MONITOR MODE")
+
             if hasattr(self.master, "update_interface_status"):
                 self.master.update_interface_status(original_name,is_active=False)
 
@@ -192,3 +222,19 @@ class monitor_window_ui(ctk.CTkToplevel):
         self.live_stats_box.delete("1.0", "end")
         self.live_stats_box.insert("end", stats_msg)
         self.live_stats_box.configure(state="disabled")
+
+    def open_advanced_menu(self):
+        interface = self.iface_dropdown.get()
+        self.advanced_window = advance_monitor.advance_monitor_ui(self, interface, self.update_log)
+        self.update_log(f"[UI] Advanced Inspector launched for {interface}")
+        self.status_text.configure(text="> Advanced Inspector is now running.", text_color="cyan")
+
+    def run_channel_hopper(self, interface):
+        current_channel = 1
+        while not self.stop_events.is_set():
+            os.system(f"sudo iw dev {interface} set channel {current_channel}")
+            time.sleep(0.5)
+            current_channel = current_channel + 1
+
+            if current_channel > 13:
+                current_channel = 1

@@ -23,12 +23,13 @@ def activate_monitor_mode(interface):
 
     try:
         os.system("sudo airmon-ng check kill")
+        os.system(f"sudo airmon-ng start {interface}")
+        mon_iface = f"{interface}mon"
 
-        os.system(f"sudo ip link set {interface} down")
-        os.system(f"sudo iw {interface} set monitor control")
-        os.system(f"sudo ip link set {interface} up")
-
-        return True, interface
+        if os.path.exists(f"/sys/class/net/{mon_iface}"):
+            return True, mon_iface
+        else:
+            return True, interface
 
     except Exception as e:
         print(f"Activation Error: {e}")
@@ -36,14 +37,8 @@ def activate_monitor_mode(interface):
 
 def deactivate_monitor_mode(mon_interface):
     try:
-        os.system(f"sudo ip link set {mon_interface} down")
-        os.system(f"sudo iw {mon_interface} set type managed")
-
         os.system(f"sudo airmon-ng stop {mon_interface}")
-        original_iface = mon_interface.replace("mon","")
-
-
-        os.system(f"sudo ip link set {original_iface} up")
+        os.system(f"sudo iw {mon_interface} set type managed")
 
         os.system("sudo systemctl restart NetworkManager")
         os.system("sudo nmcli networking on")
@@ -65,19 +60,21 @@ def start_live_capture(interface,callback,stop_events):
         #finding ssid
         if pkt.haslayer(Dot11Beacon):
             try:
-                ssid = pkt[Dot11Elt].info.decode(errors="ignore")
-                if ssid and ssid not in found_ssids:
-                    found_ssids.add(ssid)
-                    new_data_found=True
-
-            except: pass
+                if pkt.info:
+                    ssid = pkt.info.decode(errors="ignore")
+                    if ssid and ssid not in found_ssids:
+                        found_ssids.add(ssid)
+                        last_ssid = ssid
+                        new_data_found = True
+            except:
+                pass
 
         # Finding MAC
         if pkt.haslayer(Dot11) and pkt.type == 2:
-            client_mac = pkt.addr2
-            if client_mac and client_mac not in found_clients:
-                found_clients.add(client_mac)
-                new_data_found=True
+            mac = pkt.addr2
+            if mac and mac not in found_clients:
+                found_clients.add(mac)
+                new_data_found = True
 
         #stats for UI
         if new_data_found:
