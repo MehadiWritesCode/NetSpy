@@ -1,6 +1,10 @@
 import os
 import subprocess
 from scapy.all import sniff, Dot11, Dot11Beacon, Dot11Elt
+from scapy.layers.dot11 import RadioTap
+from utils import VENDOR_DB
+from scapy.layers.dhcp import DHCP
+from scapy.layers.l2 import Ether
 
 def get_available_interface():
 
@@ -46,46 +50,160 @@ def deactivate_monitor_mode(mon_interface):
         return  True
 
     except Exception as e:
-        print(f"Deviation Error: {e}")
+        print(f"Deactivation Error: {e}")
         return  False
 
 def start_live_capture(interface,callback,stop_events):
-    found_ssids = set()
-    found_clients =set()
+    found_ssids = {}
+    found_clients = {}
+    router_clients = {}
 
+    host_names = {}
     def process_packet(pkt):
+
         if stop_events.is_set(): return True
         new_data_found = False
 
+        power = -100
+        channel = 0
+        enc, cipher, auth = "OPN", "----", "----"
+
+        if pkt.haslayer(DHCP):
+            options = pkt[DHCP].options
+
+            dhcp_mac = pkt.addr2 if pkt.haslayer(Dot11) else (pkt[Ether].src if pkt.haslayer(Ether) else None)
+
+            if not dhcp_mac and pkt.haslayer(Dot11):
+                dhcp_mac = pkt.addr3
+
+            if dhcp_mac:
+                for opt in options:
+                    if isinstance(opt,tuple) and opt[0] == 'hostname':
+                        try:
+                            host_name = opt[1].decode(errors="ignore")
+                            host_names[dhcp_mac.lower()] = host_name
+
+                        except:
+                            pass
+
+        #FINDING SIGNAL STRENGTH
+        try:
+            if pkt.haslayer(RadioTap):
+                power = pkt[RadioTap].dBm_AntSignal
+            else:
+                power = -100
+        except:
+            power = -100
+
+        #FINDING CHANNEL
+        try:
+            if pkt.haslayer(Dot11Beacon):
+                enc, cipher, auth = get_encryption_info(pkt)
+                dot11_elt = pkt.getlayer(Dot11Elt, ID=3)
+
+                if dot11_elt:
+                    byte_data = dot11_elt.info
+                    channel = ord(byte_data)  # byte into number
+
+                else:
+                    if pkt.haslayer(RadioTap):
+                        freq = pkt[RadioTap].ChannelFrequency
+                        channel = frequency_to_channel(freq)
+
+        except:
+            channel = 0
+
         #finding ssid
         if pkt.haslayer(Dot11Beacon):
+            bssid = pkt.addr3
             try:
                 if pkt.info:
-                    ssid = pkt.info.decode(errors="ignore")
-                    if ssid and ssid not in found_ssids:
-                        found_ssids.add(ssid)
-                        last_ssid = ssid
+                    ssid = pkt.info.decode(errors="ignore").strip()
+                    count_clients = len(router_clients.get(bssid,[]))
+                    if bssid not in found_ssids or found_ssids[bssid][1] != power:
+                        found_ssids[bssid] = [ssid, power, channel, enc, cipher, auth,count_clients]
                         new_data_found = True
             except:
                 pass
 
         # Finding MAC
         if pkt.haslayer(Dot11) and pkt.type == 2:
-            mac = pkt.addr2
-            if mac and mac not in found_clients:
-                found_clients.add(mac)
-                new_data_found = True
+            router_mac = pkt.addr3
+            client_mac = pkt.addr2 if pkt.addr1 == router_mac else pkt.addr1
+
+            if router_mac and client_mac and router_mac != client_mac:
+                if (client_mac not in found_clients) or (found_clients.get(client_mac) != power):
+                    found_clients[client_mac] = power
+                    new_data_found = True
+
+                if router_mac not in router_clients:
+                    router_clients[router_mac] = set()
+
+                if client_mac not in router_clients[router_mac]:
+                    router_clients[router_mac].add(client_mac)
+
+                    if router_mac in found_ssids:
+                        found_ssids[router_mac][6] = len(router_clients[router_mac])
+                        new_data_found = True
 
         #stats for UI
         if new_data_found:
-            stats = (
-                f"📡 SCANNING AIRWAVES: {interface}\n"
-                f"{'=' * 35}\n"
-                f"Total Routers  : {len(found_ssids)}\n"
-                f"Active Devices : {len(found_clients)}\n"
-                f"{'=' * 35}\n"
-                f"Last SSID: {ssid if 'ssid' in locals() else '...'}\n"
-            )
-            callback(stats)
+            router_data=""
+
+            for b_id, info in found_ssids.items():
+                router_prefix = b_id[:8].upper()
+                router_brand = VENDOR_DB.get(router_prefix,"Unknown")
+                router_data += f"{'Router':<12} | {b_id:<20} | {info[0]:^25} | {info[1]:^6} | {router_brand:^12} | {info[2]:^4} | {info[3]:^15} | {info[4]:^6} | {info[5]:^5} | {info[6]:^5}\n"
+
+            device_data = ""
+            for m_adr,pwr in found_clients.items():
+
+                mac_addr_lwr =  m_adr.lower()
+                host_name = host_names.get(mac_addr_lwr,"")
+
+                device_prefix = m_adr[:8].upper()
+                device_brand = VENDOR_DB.get(device_prefix,"Randomized")
+
+                if host_name:
+                    display_name =  host_name
+
+                else:
+                    display_name = device_brand
+
+                device_data += f"{'Device':<12} | {m_adr:<20} | {' ':<25} | {pwr:^6} | {display_name:^12} |\n"
+
+            summary = f"Routers: {len(found_ssids)} | Devices: {len(found_clients)}"
+            callback(router_data,device_data,summary,found_ssids,router_clients,host_names,found_clients)
 
     sniff(iface=interface, prn=process_packet, store=0, stop_filter=lambda x: stop_events.is_set())
+
+
+def get_encryption_info(pkt):
+    encryption = "OPN"
+    auth = ""
+    cipher = ""
+
+    if pkt.haslayer(Dot11Beacon):
+        stats = pkt[Dot11Beacon].network_stats()
+        crypto = stats.get('crypto')
+
+        if crypto:
+            full_crypto = list(crypto)[0]
+
+            full_crypto = list(crypto)[0]
+            if '/' in full_crypto:
+                encryption, auth = full_crypto.split('/')
+            else:
+                encryption = full_crypto
+
+            cipher = "CCMP" if "WPA2" in encryption else "TKIP"
+
+    return encryption,cipher,auth
+
+def frequency_to_channel(freq):
+    if freq == 2484: return 14  #channel 13-14 difference 12Mhz & 1-13 5Mhz
+    if 2407 <=  freq < 2484:
+        return (freq - 2407) // 5
+    if 5030 <= freq <= 5900:
+        return (freq - 5000) // 5
+    return 0
