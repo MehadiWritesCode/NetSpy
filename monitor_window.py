@@ -301,8 +301,18 @@ class monitor_window_ui(ctk.CTkToplevel):
             100, 104, 108, 112, 149, 153, 157, 161, 165  # 5GHz (UNII-2 Ext & 3)
         ]
         index = 0
+
+        self.is_hopping = True
+
         while not self.stop_events.is_set():
-            current_channel = channels[index]
-            os.system(f"sudo iw dev {interface} set channel {current_channel}")
+
+            if self.is_hopping:
+                try:
+                    current_channel = channels[index]
+                    os.system(f"sudo iw dev {interface} set channel {current_channel}")
+                    index = (index + 1) % len(channels)
+
+                except:
+                    pass
+
             time.sleep(0.3)
-            index = (index+1) % len(channels)

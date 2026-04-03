@@ -132,8 +132,15 @@ def start_live_capture(interface,callback,stop_events):
             client_mac = pkt.addr2 if pkt.addr1 == router_mac else pkt.addr1
 
             if router_mac and client_mac and router_mac != client_mac:
+
                 if (client_mac not in found_clients) or (found_clients.get(client_mac) != power):
-                    found_clients[client_mac] = power
+
+                    if client_mac in found_clients:
+                        found_clients[client_mac][0] = power
+                        found_clients[client_mac][1] += 1
+                    else:
+                        found_clients[client_mac] = [power, 1]
+
                     new_data_found = True
 
                 if router_mac not in router_clients:
@@ -156,8 +163,9 @@ def start_live_capture(interface,callback,stop_events):
                 router_data += f"{'Router':<12} | {b_id:<20} | {info[0]:^25} | {info[1]:^6} | {router_brand:^12} | {info[2]:^4} | {info[3]:^15} | {info[4]:^6} | {info[5]:^5} | {info[6]:^5}\n"
 
             device_data = ""
-            for m_adr,pwr in found_clients.items():
+            for m_adr,data in found_clients.items():
 
+                pwr = data[0]
                 mac_addr_lwr =  m_adr.lower()
                 host_name = host_names.get(mac_addr_lwr,"")
 
