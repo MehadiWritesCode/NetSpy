@@ -2,8 +2,11 @@ Libraries >
 1.Scapy (Packet capturing engine)
 2.CustomTkinter (Modern UI Interface)
 3.Matplotlib (Realtime Graph)
+4.player
+5.sudo apt-get install libnotify-bin
 
-4.root permission: sudo .venv/bin/python3 sniffer.py
+
+6.root permission: sudo .venv/bin/python3 sniffer.py
 
 #Monitor mode setup
 sudo airmon-ng check kill

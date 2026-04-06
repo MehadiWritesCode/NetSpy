@@ -3,6 +3,7 @@ from string import printable
 
 import sniffer
 import customtkinter as ctk
+import security_analyzer_ui
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
 from monitor_window import monitor_window_ui
@@ -102,6 +103,22 @@ class NetSpyGUI(ctk.CTk):  # It means Child of CustomTkinter
         self.stats_area.pack(padx=10, pady=5, fill="both", expand=True)
         self.stats_area.configure(state="disabled")
 
+        # Security Analyzer Button Section
+        self.security_btn_frame = ctk.CTkFrame(self.stats_frame, fg_color="transparent")
+        self.security_frame_line = ctk.CTkFrame(self.stats_frame, height=2, fg_color="#333")
+        self.security_frame_line.pack(fill="x", pady=10)
+        self.security_btn_frame.pack(side="bottom", fill="x", padx=10, pady=(0, 20))
+
+        self.security_analyzer_btn = ctk.CTkButton(
+            self.security_btn_frame,
+            text="🛡️ SECURITY ANALYZER",
+            font=("Roboto", 13, "bold"),
+            fg_color="#c0392b",
+            hover_color="#a93226",
+            height=45,
+            command=self.open_security_analyzer
+        )
+        self.security_analyzer_btn.pack(fill="x")
 
         #packet list
         self.packet_list = []
@@ -219,6 +236,10 @@ class NetSpyGUI(ctk.CTk):  # It means Child of CustomTkinter
         if isinstance(data,dict):
             message = data["display"]
             raw_packet = data["raw"]
+
+            if hasattr(self, "security_win") and self.security_win.winfo_exists():
+                #If security window open then send data
+                self.security_win.engine.analyze_packet(raw_packet)
 
             self.packet_list.append(raw_packet)
 
@@ -458,3 +479,11 @@ class NetSpyGUI(ctk.CTk):  # It means Child of CustomTkinter
                 text=f"🌐 Interface: {name} (Managed)",
                 text_color="#e74c3c"
             )
+
+    def open_security_analyzer(self):
+        if hasattr(self, "security_win") and self.security_win.winfo_exists():
+            self.security_win.lift()
+
+        else:
+            self.security_win = security_analyzer_ui.SecurityAnalyzerUI(self)
+            self.update_log("[+] Security Analyzer Module Started.")
