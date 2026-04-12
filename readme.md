@@ -1,3 +1,5 @@
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg?style=flat-square)](https://www.gnu.org/licenses/gpl-3.0)
+
 # NetSpy - Network Traffic Monitor & Security Analyzer
 
 NetSpy is a powerful, real-time network packet sniffing and security analysis tool built with Python. It allows users to monitor network traffic, visualize data flow, and detect potential security threats like data leakage and DNS tunneling.
@@ -69,4 +71,4 @@ NetSpy is a powerful, real-time network packet sniffing and security analysis to
    
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the  GPLv3 License - see the [LICENSE](LICENSE) file for details.
