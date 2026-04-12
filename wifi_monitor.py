@@ -6,6 +6,12 @@ from utils import VENDOR_DB
 from scapy.layers.dhcp import DHCP
 from scapy.layers.l2 import Ether
 
+# --------------------------------------
+# Copyright (c) 2026 Mehadi Hasan
+# Project: NetSpy - Network Security Analyzer
+# License: MIT License
+# ---------------------------------------
+
 def get_available_interface():
 
     try:

@@ -117,3 +117,10 @@ class SecurityAnalyzerUI(ctk.CTkToplevel):
         self.stat_labels["TOTAL UPLOAD"].configure(text=f"{total_upload:.2f} MB")
         self.stat_labels["DNS QUERIES"].configure(text=str(total_dns))
         self.stat_labels["ACTIVE THREATS"].configure(text=str(threats))
+
+
+# --------------------------------------
+# Copyright (c) 2026 Mehadi Hasan
+# Project: NetSpy - Network Security Analyzer
+# License: MIT License
+# ---------------------------------------

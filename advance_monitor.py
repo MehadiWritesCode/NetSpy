@@ -242,6 +242,12 @@ class advance_monitor_ui(ctk.CTkToplevel):
         except Exception as e:
             self.write_to_terminal(f"Sync Error: {e}")
 
+    # ---------------------------------------
+    # Copyright (c) 2026 Mehadi Hasan
+    # Project: NetSpy - Network Security Analyzer
+    # License: MIT License
+    # ---------------------------------------
+
     def manual_lock_event(self):
 
         if self.master.is_hopping:

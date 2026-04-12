@@ -1,47 +1,5 @@
-Libraries >
-1.Scapy (Packet capturing engine)
-2.CustomTkinter (Modern UI Interface)
-3.Matplotlib (Realtime Graph)
-4.player
-5.sudo apt-get install libnotify-bin
-
-
-6.root permission: sudo .venv/bin/python3 sniffer.py
-
-#Monitor mode setup
-sudo airmon-ng check kill
-sudo airmon-ng start wlan0
-iwconfig
-sudo airmon-ng stop wlan0mon
-
-#Network restart
-sudo systemctl restart NetworkManager
-sudo nmcli networking on
-
-#manuf download
-wget https://2.python-requests.org/en/master/_static/manuf -O manuf
-or,
-curl -L https://raw.githubusercontent.com/boundary/wireshark/master/manuf -o manuf
-
-#wifi channel fix
-sudo iwconfig wlan0mon channel 6
-sudo iw set wlan0mon channel 11
-
-#Increase range
-sudo ifconfig wlan0mon down
-sudo iw reg set GY
-sudo ifconfig wlan0mon up
-sudo iwconfig wlan0mon txpower 30
-
-#Traffic analysis debugging
-sudo tcpdump -i wlan0mon -n
-sudo tshark -i wlan0mon -c 10
-
-
-#KEY POINTS
-1. Address 1: Receiver Address (RA)
-Definition: The device that physically receives the signal from the air right now.
-
-2. Address 2: Transmitter Address (TA)
-3. Address 3: BSSID
-
+scapy
+customtkinter
+matplotlib
+plyer
+requests

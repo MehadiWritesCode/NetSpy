@@ -1,4 +1,9 @@
 import socket
+# --------------------------------------
+# Copyright (c) 2026 Mehadi Hasan
+# Project: NetSpy - Network Security Analyzer
+# License: MIT License
+# ---------------------------------------
 from scapy.all import sniff, IP, UDP, TCP,ICMP,ARP
 import os
 def get_my_IP():
@@ -18,7 +23,7 @@ def start_packet_sniffing(gui_callback,stop_check,interface):
 
     check_iface = os.system(f"ip link show {interface} | grep 'UP' > /dev/null")
     if check_iface != 0:
-        # যদি আপ না থাকে তবে জোর করে আপ করা
+
         os.system(f"sudo ip link set {interface} up")
 
     def packet_callback(packet):

@@ -1,4 +1,10 @@
 import time
+# --------------------------------------
+# Copyright (c) 2026 Mehadi Hasan
+# Project: NetSpy - Network Security Analyzer
+# License: MIT License
+# ---------------------------------------
+
 from scapy.all import IP, DNS, DNSQR
 class security_engine:
     def __init__(self, alert_callback, table_callback):

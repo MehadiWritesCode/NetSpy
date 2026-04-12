@@ -5,7 +5,11 @@ import advance_monitor
 import time
 import os
 import wifi_monitor
-
+# ---------------------------------------
+# Copyright (c) 2026 Mehadi Hasan
+# Project: NetSpy - Network Security Analyzer
+# License: MIT License
+# ---------------------------------------
 class monitor_window_ui(ctk.CTkToplevel):
     def __init__(self, parent, update_log):
         super().__init__(parent)

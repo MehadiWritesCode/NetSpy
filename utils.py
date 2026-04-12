@@ -1,5 +1,9 @@
 import os
-
+# --------------------------------------
+# Copyright (c) 2026 Mehadi Hasan
+# Project: NetSpy - Network Security Analyzer
+# License: MIT License
+# ---------------------------------------
 def load_vendor_db():
     vendor_dict = {}
 

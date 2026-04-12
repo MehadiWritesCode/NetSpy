@@ -487,3 +487,9 @@ class NetSpyGUI(ctk.CTk):  # It means Child of CustomTkinter
         else:
             self.security_win = security_analyzer_ui.SecurityAnalyzerUI(self)
             self.update_log("[+] Security Analyzer Module Started.")
+
+# ---------------------------------------------
+# Copyright (c) 2026 Mehadi Hasan
+# Project: NetSpy - Network Security Analyzer
+# License: MIT License
+# ---------------------------------------
