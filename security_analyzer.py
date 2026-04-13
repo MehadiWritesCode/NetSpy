@@ -19,15 +19,57 @@
 
 import time
 from scapy.all import IP, DNS, DNSQR
+import ipaddress
+import requests
+
 class security_engine:
     def __init__(self, alert_callback, table_callback):
         self.alert_callback = alert_callback
         self.table_callback = table_callback
+        self.location_cache = {}
         self.status = {}
 
         self.upload_limit = 5 * 1024 * 1024
-        self.request_alert = 30
+        self.request_alert = 50
 
+        self.whitelist = [
+            # Search & AI
+            "google.com", "google.com.bd", "bing.com", "openai.com", "chatgpt.com",
+            "anthropic.com", "perplexity.ai", "gemini.google.com",
+
+            # Cloud & Storage
+            "drive.google.com", "dropbox.com", "icloud.com", "supabase.com", "supabase.co",
+            "amazon.com", "aws.amazon.com", "netlify.com", "netlify.app",
+
+            # Productivity & Education
+            "classroom.google.com", "microsoft.com", "office.com", "teams.microsoft.com",
+            "live.com", "zoom.us", "github.com", "gitlab.com",
+
+            # Social & Media
+            "youtube.com", "googlevideo.com", "facebook.com", "fbcdn.net", "instagram.com",
+
+            # Local & Others
+            "startech.com.bd", "daraz.com.bd", "gmail.com", "outlook.com",
+            ".local","google-analytics.com","gvt2.com","clients6.google.com",
+            "clients4.google.com","safebrowsing.google.com","vercel.com","safebrowsing.google.com",
+            "ip - api.com",
+        ]
+
+    def get_location(self,ip):
+        if ipaddress.ip_address(ip).is_private:
+            return "Local Network"
+
+        if ip in self.location_cache:
+            return self.location_cache[ip]
+
+        try:
+            response = requests.get(f"http://ip-api.com/json/{ip}?fields=status,country,countryCode", timeout=2).json()
+            if response.get('status') == 'success':
+                location = f"{response['country']} {response['countryCode']}"
+                self.location_cache[ip] = location
+                return location
+        except:
+            pass
 
     def analyze_packet(self,pkt):
         if pkt.haslayer(IP):
@@ -35,13 +77,33 @@ class security_engine:
             pkt_size = len(pkt)
 
             if src_ip not in self.status:
-                self.status[src_ip] = {'upload': 0, 'dns': 0, 'risk': 'LOW'}
+                if src_ip not in self.status:
+                    self.status[src_ip] = {
+                        'upload': 0,
+                        'dns': 0,
+                        'risk': 'LOW',
+                        'last_reset': time.time()
+                    }
+                current_time = time.time()
+                if current_time - self.status[src_ip]['last_reset'] > 60:
+                    self.status[src_ip]['dns'] = 0
+                    self.status[src_ip]['last_reset'] = current_time
 
             self.status[src_ip]['upload'] += pkt_size
 
             if pkt.haslayer(DNS) and pkt.getlayer(DNS).qr == 0:
-                self.status[src_ip]['dns'] += 1
 
+                try:
+                    qname = pkt[DNSQR].qname.decode()
+                    print(f"DNS Request from {src_ip} for: {qname}")
+                    if not any(domain in qname for domain in self.whitelist):
+                        self.status[src_ip]['dns'] += 1
+
+                        if len(qname) > 60: #too large domain
+                            self.alert_callback(f"⚠️ High Entropy DNS: {qname[:30]}... from {src_ip}")
+
+                except:
+                    pass
 
             self.check_threats(src_ip)
             self.table_callback(src_ip,self.status[src_ip])
@@ -54,5 +116,6 @@ class security_engine:
             self.alert_callback(f"Heavy Data Leakage! {src_ip} sent > 5MB")
 
         if data['dns'] > self.request_alert:
+            data['risk'] = 'HIGH'
             self.alert_callback(f"Potential DNS Tunneling from {src_ip}!")
             data['dns'] = 0

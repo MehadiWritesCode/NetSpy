@@ -20,6 +20,7 @@
 import customtkinter as ctk
 import threading
 import time
+import os
 from plyer import notification
 from security_analyzer import security_engine
 
@@ -65,8 +66,7 @@ class SecurityAnalyzerUI(ctk.CTkToplevel):
             font=("Consolas", 12), border_width=1, border_color="#333"
         )
         self.traffic_table.pack(fill="x", pady=(5, 20))
-        self.traffic_table.insert("0.0",
-                                  f"{'IP ADDRESS':<20} | {'UPLOADED':<15} | {'DNS REQS':<10} | {'RISK LEVEL':<10}\n" + "-" * 65)
+        self.traffic_table.insert("0.0",f"{'IP ADDRESS':<20} | {'LOCATION':<20} | {'UPLOADED':<15} | {'DNS REQS':<10} | {'RISK LEVEL':<10}\n" + "-" * 73)
         self.traffic_table.configure(state="disabled")
 
         # 2. Real-time Threat Log
@@ -102,20 +102,16 @@ class SecurityAnalyzerUI(ctk.CTkToplevel):
         timestamp = time.strftime("%H:%M:%S")
         self.alert_log.insert("1.0", f"[{timestamp}] 🚨 ALERT: {message}\n")
         self.alert_log.configure(state="disabled")
+        os.system(f'notify-send "NetSpy Security Alert!" "{message}"')
 
-        notification.notify(
-            title="NetSpy Security Alert!",
-            message=message,
-            timeout=5
-        )
 
     def update_table_ui(self, ip, data):
         self.traffic_table.configure(state="normal")
 
         self.traffic_table.delete("1.0", "end")
 
-        header = f"{'IP ADDRESS':<20} | {'UPLOADED':<15} | {'DNS REQS':<10} | {'RISK LEVEL':<10}\n"
-        separator = "-" * 65 + "\n"
+        header = f"{'IP ADDRESS':<20} | {'LOCATION':<20} | {'UPLOADED':<15} | {'DNS REQS':<10} | {'RISK':<10}\n"
+        separator = "-" * 81 + "\n"
         self.traffic_table.insert("end", header)
         self.traffic_table.insert("end", separator)
 
@@ -123,8 +119,8 @@ class SecurityAnalyzerUI(ctk.CTkToplevel):
 
         for target_ip, info in sorted_stats:
             upload_mb = f"{info['upload'] / (1024 * 1024):.2f} MB"
-
-            row = f"{str(target_ip):<20} | {upload_mb:<15} | {str(info['dns']):<10} | {info['risk']:<10}\n"
+            location = self.engine.get_location(str(target_ip))
+            row = f"{str(target_ip):<20} | {location[:20]:<20} | {upload_mb:<15} | {info['dns']:<10} | {info['risk']:<10}\n"
             self.traffic_table.insert("end", row)
 
         self.traffic_table.configure(state="disabled")
