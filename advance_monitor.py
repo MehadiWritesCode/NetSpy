@@ -1,3 +1,21 @@
+# ===========================================================================
+# NetSpy - Network Traffic Monitor & Security Analyzer
+# Copyright (C) 2026 Mehadi Hasan
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <https://www.gnu.org/licenses/>.
+# ===============================================================================
+
 import customtkinter as ctk
 import os
 import re
@@ -6,7 +24,6 @@ from scapy.layers.dot11 import Dot11, RadioTap, Dot11Deauth, Dot11Disas
 from scapy.sendrecv import sendp
 
 from utils import VENDOR_DB
-
 
 class advance_monitor_ui(ctk.CTkToplevel):
     def __init__(self, parent, interface, update_log):
@@ -242,11 +259,6 @@ class advance_monitor_ui(ctk.CTkToplevel):
         except Exception as e:
             self.write_to_terminal(f"Sync Error: {e}")
 
-    # ---------------------------------------
-    # Copyright (c) 2026 Mehadi Hasan
-    # Project: NetSpy - Network Security Analyzer
-    # License: MIT License
-    # ---------------------------------------
 
     def manual_lock_event(self):
 

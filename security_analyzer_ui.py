@@ -1,3 +1,22 @@
+# ===========================================================================
+# NetSpy - Network Traffic Monitor & Security Analyzer
+# Copyright (C) 2026 Mehadi Hasan
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <https://www.gnu.org/licenses/>.
+# ===============================================================================
+
+
 import customtkinter as ctk
 import threading
 import time
@@ -118,9 +137,3 @@ class SecurityAnalyzerUI(ctk.CTkToplevel):
         self.stat_labels["DNS QUERIES"].configure(text=str(total_dns))
         self.stat_labels["ACTIVE THREATS"].configure(text=str(threats))
 
-
-# --------------------------------------
-# Copyright (c) 2026 Mehadi Hasan
-# Project: NetSpy - Network Security Analyzer
-# License: MIT License
-# ---------------------------------------
