@@ -1,44 +1,30 @@
 # ===========================================================================
 # NetSpy - Network Traffic Monitor & Security Analyzer
 # Copyright (C) 2026 Mehadi Hasan
-
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
-
-# You should have received a copy of the GNU General Public License
-# along with this program. If not, see <https://www.gnu.org/licenses/>.
-# ===============================================================================
-
+# Licensed under GNU GPL v3
+# ===========================================================================
 
 import socket
-from scapy.all import sniff, IP, UDP, TCP,ICMP,ARP
 import os
+from scapy.all import sniff, IP, UDP, TCP, ICMP, ARP
+
 
 def get_my_IP():
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.connect(("8.8.8.8",80))
-
-        ip= s.getsockname()[0]
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
         s.close()
         return ip
     except:
         return "127.0.0.1"
 
 
-def start_packet_sniffing(gui_callback,stop_check,interface):
+def start_packet_sniffing(gui_callback, stop_check, interface):
     MY_IP = get_my_IP()
 
     check_iface = os.system(f"ip link show {interface} | grep 'UP' > /dev/null")
     if check_iface != 0:
-
         os.system(f"sudo ip link set {interface} up")
 
     def packet_callback(packet):
@@ -52,15 +38,15 @@ def start_packet_sniffing(gui_callback,stop_check,interface):
             dest_ip = packet[IP].dst
 
             if src_ip == MY_IP:
-                direction ="OUT >>"
+                direction = "OUT >>"
             elif dest_ip == MY_IP:
-                direction ="<< IN"
+                direction = "<< IN"
             elif dest_ip.startswith("224.") or dest_ip.startswith("239."):
                 direction = "MULTI"
             elif dest_ip == "255.255.255.255":
                 direction = "BCAST"
             else:
-                direction="OTHER"
+                direction = "OTHER"
 
             if packet.haslayer(TCP):
                 protocol = "TCP"
@@ -73,25 +59,21 @@ def start_packet_sniffing(gui_callback,stop_check,interface):
 
         elif packet.haslayer(ARP):
             protocol = "ARP"
-            src_ip = packet[ARP].psrc  # Source Hardware/Protocol address
+            src_ip = packet[ARP].psrc
             dest_ip = packet[ARP].pdst
 
         size = len(packet)
-
-        log_data =f"{protocol:<10} | {direction:<6} | {src_ip:<18} | {dest_ip:<20} | {size}B"
-        gui_callback({"display":log_data,"raw":packet})
-
+        log_data = f"{protocol:<10} | {direction:<6} | {src_ip:<18} | {dest_ip:<20} | {size}B"
+        gui_callback({"display": log_data, "raw": packet})
 
     try:
-        # Function to call for each packet captured
         sniff(
             iface=interface,
-            prn=packet_callback, # prn= Packet Rendering Network
-            store=0, # Don't keep packets in memory
-            stop_filter=lambda x: stop_check()# stop_check true then stop sniffing
+            prn=packet_callback,
+            store=0,
+            stop_filter=lambda x: stop_check()
         )
-    except OSError as e:
+    except OSError:
         gui_callback({"display": f"[!] Sniffer Error: {interface} is down.", "raw": None})
     except Exception as e:
         gui_callback({"display": f"[!] Error: {str(e)}", "raw": None})
-

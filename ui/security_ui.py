@@ -1,28 +1,14 @@
 # ===========================================================================
 # NetSpy - Network Traffic Monitor & Security Analyzer
 # Copyright (C) 2026 Mehadi Hasan
+# Licensed under GNU GPL v3
+# ===========================================================================
 
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
-
-# You should have received a copy of the GNU General Public License
-# along with this program. If not, see <https://www.gnu.org/licenses/>.
-# ===============================================================================
-
-
-import customtkinter as ctk
-import threading
 import time
 import os
-from plyer import notification
-from security_analyzer import security_engine
+import customtkinter as ctk
+from core.security_engine import SecurityEngine
+
 
 class SecurityAnalyzerUI(ctk.CTkToplevel):
     def __init__(self, parent):
@@ -45,32 +31,44 @@ class SecurityAnalyzerUI(ctk.CTkToplevel):
         )
         self.title_label.place(relx=0.5, rely=0.5, anchor="center")
 
-        # --- Top Dashboard Stats ---
+        # --- Dashboard Stats ---
         self.dash_frame = ctk.CTkFrame(self, fg_color="transparent")
         self.dash_frame.pack(fill="x", padx=20, pady=20)
 
-        # Stats Cards (Simple visualization)
         self.create_stat_card(self.dash_frame, "TOTAL UPLOAD", "0.0 MB", "#3498db", 0)
         self.create_stat_card(self.dash_frame, "ACTIVE THREATS", "0", "#e74c3c", 1)
         self.create_stat_card(self.dash_frame, "DNS QUERIES", "0", "#f1c40f", 2)
 
-        # --- Main Layout (Table + Alert Log) ---
+        # --- Main Layout ---
         self.main_container = ctk.CTkFrame(self, fg_color="transparent")
         self.main_container.pack(fill="both", expand=True, padx=20)
 
-        # 1. Leakage Tracking Table
-        ctk.CTkLabel(self.main_container, text="[ DEVICE TRAFFIC ANALYSIS ]", font=("Consolas", 12),text_color="#888").pack(anchor="w")
+        ctk.CTkLabel(
+            self.main_container,
+            text="[ DEVICE TRAFFIC ANALYSIS ]",
+            font=("Consolas", 12),
+            text_color="#888"
+        ).pack(anchor="w")
 
         self.traffic_table = ctk.CTkTextbox(
-            self.main_container, height=250, fg_color="#050505", text_color="#00FF00",
-            font=("Consolas", 12), border_width=1, border_color="#333"
+            self.main_container, height=250, fg_color="#050505",
+            text_color="#00FF00", font=("Consolas", 12),
+            border_width=1, border_color="#333"
         )
         self.traffic_table.pack(fill="x", pady=(5, 20))
-        self.traffic_table.insert("0.0",f"{'IP ADDRESS':<20} | {'LOCATION':<20} | {'UPLOADED':<15} | {'DNS REQS':<10} | {'RISK LEVEL':<10}\n" + "-" * 73)
+        self.traffic_table.insert(
+            "0.0",
+            f"{'IP ADDRESS':<20} | {'LOCATION':<20} | {'UPLOADED':<15} | {'DNS REQS':<10} | {'RISK LEVEL':<10}\n"
+            + "-" * 73
+        )
         self.traffic_table.configure(state="disabled")
 
-        # 2. Real-time Threat Log
-        ctk.CTkLabel(self.main_container, text="[ SECURITY EVENTS / ALERTS ]", font=("Consolas", 12),text_color="#888").pack(anchor="w")
+        ctk.CTkLabel(
+            self.main_container,
+            text="[ SECURITY EVENTS / ALERTS ]",
+            font=("Consolas", 12),
+            text_color="#888"
+        ).pack(anchor="w")
 
         self.alert_log = ctk.CTkTextbox(
             self.main_container, fg_color="#000", text_color="#e74c3c",
@@ -78,7 +76,7 @@ class SecurityAnalyzerUI(ctk.CTkToplevel):
         )
         self.alert_log.pack(fill="both", expand=True, pady=(5, 20))
 
-        self.engine = security_engine(
+        self.engine = SecurityEngine(
             alert_callback=self.add_alert,
             table_callback=self.update_table_ui
         )
@@ -92,10 +90,9 @@ class SecurityAnalyzerUI(ctk.CTkToplevel):
         lbl = ctk.CTkLabel(card, text=val, font=("Roboto", 20, "bold"), text_color=color)
         lbl.pack()
 
-        if not hasattr(self, 'stat_labels'): self.stat_labels = {}
+        if not hasattr(self, 'stat_labels'):
+            self.stat_labels = {}
         self.stat_labels[title] = lbl
-
-        return lbl
 
     def add_alert(self, message):
         self.alert_log.configure(state="normal")
@@ -104,10 +101,8 @@ class SecurityAnalyzerUI(ctk.CTkToplevel):
         self.alert_log.configure(state="disabled")
         os.system(f'notify-send "NetSpy Security Alert!" "{message}"')
 
-
     def update_table_ui(self, ip, data):
         self.traffic_table.configure(state="normal")
-
         self.traffic_table.delete("1.0", "end")
 
         header = f"{'IP ADDRESS':<20} | {'LOCATION':<20} | {'UPLOADED':<15} | {'DNS REQS':<10} | {'RISK':<10}\n"
@@ -120,16 +115,18 @@ class SecurityAnalyzerUI(ctk.CTkToplevel):
         for target_ip, info in sorted_stats:
             upload_mb = f"{info['upload'] / (1024 * 1024):.2f} MB"
             location = self.engine.get_location(str(target_ip))
-            row = f"{str(target_ip):<20} | {location[:20]:<20} | {upload_mb:<15} | {info['dns']:<10} | {info['risk']:<10}\n"
+            row = (
+                f"{str(target_ip):<20} | {location[:20]:<20} | "
+                f"{upload_mb:<15} | {info['dns']:<10} | {info['risk']:<10}\n"
+            )
             self.traffic_table.insert("end", row)
 
         self.traffic_table.configure(state="disabled")
 
-        total_upload = sum(item['upload'] for item in self.engine.status.values()) / (1024 * 1024)
-        total_dns = sum(item['dns'] for item in self.engine.status.values())
-        threats = sum(1 for item in self.engine.status.values() if item['risk'] == 'CRITICAL')
+        total_upload = sum(i['upload'] for i in self.engine.status.values()) / (1024 * 1024)
+        total_dns = sum(i['dns'] for i in self.engine.status.values())
+        threats = sum(1 for i in self.engine.status.values() if i['risk'] == 'CRITICAL')
 
         self.stat_labels["TOTAL UPLOAD"].configure(text=f"{total_upload:.2f} MB")
         self.stat_labels["DNS QUERIES"].configure(text=str(total_dns))
         self.stat_labels["ACTIVE THREATS"].configure(text=str(threats))
-

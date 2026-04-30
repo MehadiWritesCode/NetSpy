@@ -1,23 +1,20 @@
 # ===========================================================================
 # NetSpy - Network Traffic Monitor & Security Analyzer
 # Copyright (C) 2026 Mehadi Hasan
+# Licensed under GNU GPL v3
+# ===========================================================================
 
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
+import customtkinter as ctk
 
-# You should have received a copy of the GNU General Public License
-# along with this program. If not, see <https://www.gnu.org/licenses/>.
-# ===============================================================================
+ctk.set_appearance_mode("dark")
+ctk.set_default_color_theme("blue")
 
-from gui import NetSpyGUI
+from ui.main_window import NetSpyGUI
 
 if __name__ == "__main__":
     app = NetSpyGUI()
-    app.mainloop()  # Keeps the application window running cause screen refresh multiple times within minutes.
+    app.mainloop()
